@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://dimplejs.org/dist/dimple.v2.0.0.min.js"></script>
+  <style>
+  h2{
+    text-align: center;
+  }
+  .dimple-r {
+    fill: red;
+    opacity: 0.5;
+    stroke: 0.7;
+}
+
+  .dimple-b {
+    fill: green;
+    opacity: 0.5;
+    stroke: 0.7;
+}
+
+  .dimple-l {
+    fill: blue;
+    opacity: 0.5;
+    stroke: 0.7;
+}
+select#axis{
+        position:absolute;
+        left:100px;
+        top:100px
+}
+  </style>
+    <script  type="text/javascript">
+
+      function draw(data) {
+      /*
+        D3.js setup code
+      */
+          var margin = 75,
+              width = 1400 - margin,
+              height = 600 - margin;
+
+          d3.select('body').append('h2').text('棒球运动员击球率与其他变量关系');
+          var cleanAxis = function (axis, oneInEvery) {
+              if (axis.shapes.length > 0) {
+                  var del = 0;
+                  if (oneInEvery > 1) {
+                      axis.shapes.selectAll("text").each(function(d) {
+                          d3.select(this).attr("opacity", 1);
+                          if (del % oneInEvery !== 0) {
+                              d3.select(this).attr("opacity", 0);
+                          }
+                          del += 1;
+                      });
+                  }
+              }
+          };
+
+      /*
+        Dimple.js Chart construction code
+      */
+      //画气泡图
+          var drawChart=function(axis_x)
+          {
+            var svg = d3.select("body")
+                      .append("svg")
+                      .attr("width", width + margin)
+                      .attr("height", height + margin)
+                      .append('g')
+                      .attr('class','chart');
+            var mychart = new dimple.chart(svg, data);
+            var x=mychart.addCategoryAxis("x", axis_x);
+            if (axis_x=='height'){
+              x.title="身高（英寸）";
+            }
+            else{
+              x.title="体重（磅）";
+            }
+            var y=mychart.addCategoryAxis("y", "avg");
+            y.title="击球率";
+             mychart.addSeries(
+            ['name','handedness','HR','avg','height','weight'],
+            dimple.plot.bubble
+            );
+
+            return mychart;
+          }
+          var mychart=drawChart("height");
+          mychart.draw();
+          cleanAxis(mychart.axes[1], 20);
+          //d3.selectAll("circle").style("opacity", 0.5).style("stroke", 0.7);
+//下拉列表改变x轴的值
+          x_type = [{'value': '身高'}, {'value': '体重'}];
+          var axis_list = d3.select("body")
+                            .append("select")
+                            .attr("id", "axis");
+          var axis_value=axis_list.selectAll("option")
+                                  .data(x_type)
+                                  .enter()
+                                  .append("option");
+          axis_value.text(function(d){ return d.value; })
+                 .attr("value", function (d) { return d.value; });
+          axis_list.on("change", xAxisChanged);
+
+          function xAxisChanged(){
+              var selectedValue = d3.event.target.value;
+              if(selectedValue === '身高'){
+                  var selection = 'height';
+              }
+              else{
+                  var selection = 'weight';
+              }
+              d3.selectAll("svg").remove();
+              var my_chart= drawChart(selection);
+              my_chart.draw();
+              cleanAxis(my_chart.axes[1], 20);
+          }
+
+//用手习惯分类按钮
+          var buttonNames = ["All", "Left", "Right", "Both"];
+          d3.select("#Bttn")
+              .selectAll("input")
+              .data(buttonNames)
+              .enter()
+              .append("input")
+              .attr("type", "button")
+              .attr("class", "button")
+              .attr("id", function(d) {
+                  return d;
+              })
+              .attr("value", function(d) {
+                  return d;
+              });
+//显示全部
+          d3.select("#All").on("click", function(d) {
+              d3.selectAll("circle.dimple-bubble").transition().duration(500).style("opacity", 0.5);
+          });
+
+//过滤仅展示用手习惯左/右/均用的运动员
+          function filterbttn(cls_id, val) {
+              d3.select(cls_id).on("click", function(d) {
+                d3.selectAll("circle").style("opacity", 0);
+                str="circle.dimple-"+val
+                d3.selectAll(str).transition().duration(500).style("opacity", 0.5);
+              });
+          };
+
+          filterbttn("#Left", "l");
+
+          filterbttn("#Right", "r");
+
+          filterbttn("#Both", "b");
+
+         
+      };
+        
+      </script>
+  </head>
+<body>
+<div id="Bttn">
+</div>
+  <script type="text/javascript">
+  /*
+    Use D3 (not dimple.js) to load the TSV file
+    and pass the contents of it to the draw function
+    */
+  d3.csv("baseball_data.csv", draw);
+  </script>
+</body>
+</html>
